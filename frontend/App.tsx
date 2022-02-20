@@ -7,7 +7,7 @@ import { Button, Platform, StyleSheet, Text, TouchableOpacity, View } from 'reac
 import localhost from 'react-native-localhost';
 import Web3 from 'web3';
 
-import Hello from '../artifacts/contracts/Hello.sol/Hello.json';
+// import Hello from '../artifacts/contracts/Hello.sol/Hello.json';
 
 const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
@@ -41,14 +41,13 @@ export default function App(): JSX.Element {
   React.useEffect(() => {
     void (async () => {
       const { address } = await web3.eth.accounts.privateKeyToAccount(HARDHAT_PRIVATE_KEY);
-      const contract = await shouldDeployContract(
-        web3,
-        Hello.abi,
-        Hello.bytecode,
-        address
-      );
-      console.log("useEffect called...")
-      setMessage(await contract.methods.sayHello('React Native').call());
+      // const contract = await shouldDeployContract(
+      //   web3,
+      //   Hello.abi,
+      //   Hello.bytecode,
+      //   address
+      // );
+      setMessage('React Native');
     })();
   }, [web3, shouldDeployContract, setMessage, HARDHAT_PRIVATE_KEY]);
 
