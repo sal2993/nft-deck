@@ -1,7 +1,9 @@
 import { HARDHAT_PORT, HARDHAT_PRIVATE_KEY } from '@env';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useWalletConnect } from '@walletconnect/react-native-dapp';
+import { WalletConnectProvider } from '@walletconnect/react-native-dapp/dist/providers';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Button, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import localhost from 'react-native-localhost';
 import Web3 from 'web3';
 
@@ -11,6 +13,7 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
   // eslint-disable-next-line react-native/no-color-literals
   white: { backgroundColor: 'white' },
+  headerOne: { fontSize: 30}
 });
 
 const shouldDeployContract = async (web3, abi, data, from: string) => {
@@ -22,13 +25,19 @@ const shouldDeployContract = async (web3, abi, data, from: string) => {
   return new web3.eth.Contract(abi, contractAddress);
 };
 
+let ethBal = '0'
 export default function App(): JSX.Element {
   const connector = useWalletConnect();
   const [message, setMessage] = React.useState<string>('Loading...');
   const web3 = React.useMemo(
-    () => new Web3(new Web3.providers.HttpProvider(`http://${localhost}:${HARDHAT_PORT}`)),
+    () => new Web3(new Web3.providers.HttpProvider('https://mainnet.infura.io/v3/4f719d05d3604e9dbfb33fe8cc75a116')),
     [HARDHAT_PORT]
-  );
+    );
+  web3.eth.getBalance('0x06cC48b1235b92B8A173223127b88E756864f8fF')
+    .then((bal) => {
+      console.log('bal: ', bal)
+      console.log('formated bal: ', web3.utils.fromWei(bal) )
+      ethBal = web3.utils.fromWei(bal) })
   React.useEffect(() => {
     void (async () => {
       const { address } = await web3.eth.accounts.privateKeyToAccount(HARDHAT_PRIVATE_KEY);
@@ -38,12 +47,15 @@ export default function App(): JSX.Element {
         Hello.bytecode,
         address
       );
+      console.log("useEffect called...")
       setMessage(await contract.methods.sayHello('React Native').call());
     })();
   }, [web3, shouldDeployContract, setMessage, HARDHAT_PRIVATE_KEY]);
+
   const connectWallet = React.useCallback(() => {
     return connector.connect();
   }, [connector]);
+  
   const signTransaction = React.useCallback(async () => {
     try {
        await connector.signTransaction({
@@ -63,24 +75,43 @@ export default function App(): JSX.Element {
     return connector.killSession();
   }, [connector]);
   return (
-    <View style={[StyleSheet.absoluteFill, styles.center, styles.white]}>
-      <Text>NftDeck</Text>
-      <Text testID="tid-message">{message}</Text>
-      {!connector.connected && (
-        <TouchableOpacity onPress={connectWallet}>
-          <Text>Connect a Wallet</Text>
-        </TouchableOpacity>
-      )}
-      {!!connector.connected && (
-        <>
-          <TouchableOpacity onPress={signTransaction}>
-            <Text>Sign a Transaction</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={killSession}>
-            <Text>Kill Session</Text>
-          </TouchableOpacity>
-        </>
-      )}
-    </View>
+    <WalletConnectProvider 
+      bridge="https://bridge.walletconnect.org"
+      clientMeta={{
+        description: 'Connect with WalletConnect',
+        url: 'https://walletconnect.org',
+        icons: ['https://walletconnect.org/walletconnect-logo.png'],
+        name: 'WalletConnect',
+      }}
+      redirectUrl={Platform.OS === 'web' ? window.location.origin : 'yourappscheme://'}
+      storageOptions={{
+        asyncStorage: AsyncStorage
+      }}
+      
+    >
+      <View style={[StyleSheet.absoluteFill, styles.center, styles.white]}>
+        <Text style={styles.headerOne}>NftDeck</Text>
+        <Text testID="tid-message">{message}</Text>
+        {!connector.connected && (
+          <Button title='Connect a Wallet' onPress={connectWallet} />
+        )}
+        {!!connector.connected && (
+          <>
+            <Text>Eth Balance: {ethBal}</Text>
+            <Text>NFT Balance (est): $451.02</Text>
+            <TouchableOpacity onPress={signTransaction}>
+              <Text>Sign a Transaction</Text>
+            </TouchableOpacity>
+            <Text>{connector.accounts}</Text>
+            <Text>{}</Text>
+            <TouchableOpacity onPress={killSession}>
+              <Text>Kill Session</Text>
+            </TouchableOpacity>
+          </>
+        )}
+      </View>
+    </WalletConnectProvider>
+
+    
   );
 }
